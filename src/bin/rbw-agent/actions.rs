@@ -140,7 +140,26 @@ pub async fn login(
                     .await?;
                     break;
                 }
-                Err(rbw::error::Error::TwoFactorRequired { providers }) => {
+                Err(rbw::error::Error::TwoFactorRequired {
+                    providers,
+                    providers2,
+                }) => {
+                    // First try with WebAuthn
+                    if let Some(providers2) = providers2 {
+                        if providers2.contains_key(
+                            &rbw::api::TwoFactorProviderType::WebAuthn,
+                        ) && providers2
+                            [&rbw::api::TwoFactorProviderType::WebAuthn]
+                            .is_some()
+                        {
+                            let webauthn = &providers2
+                                [&rbw::api::TwoFactorProviderType::WebAuthn];
+                            dbg!(webauthn);
+                            // TODO: this is the place to get the sign from the key
+                        }
+                    }
+
+                    // Then try with TOTP
                     if providers.contains(
                         &rbw::api::TwoFactorProviderType::Authenticator,
                     ) {
@@ -149,7 +168,7 @@ pub async fn login(
                             refresh_token,
                             iterations,
                             protected_key,
-                        ) = two_factor(
+                        ) = two_factor_totp(
                             tty,
                             &email,
                             password.clone(),
@@ -195,7 +214,7 @@ pub async fn login(
     Ok(())
 }
 
-async fn two_factor(
+async fn two_factor_totp(
     tty: Option<&str>,
     email: &str,
     password: rbw::locked::Password,

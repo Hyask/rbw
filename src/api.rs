@@ -2,6 +2,8 @@
 // here, unfortunately
 #![allow(clippy::as_conversions)]
 
+use std::collections::HashMap;
+
 use crate::prelude::*;
 
 use crate::json::{
@@ -45,7 +47,7 @@ impl std::fmt::Display for UriMatchType {
     }
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub enum TwoFactorProviderType {
     Authenticator = 0,
     Email = 1,
@@ -55,6 +57,12 @@ pub enum TwoFactorProviderType {
     Remember = 5,
     OrganizationDuo = 6,
     WebAuthn = 7,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, serde::Deserialize)]
+pub struct TwoFactorProvider2WebAuthn {
+    challenge: String,
+    timeout: u64,
 }
 
 impl<'de> serde::Deserialize<'de> for TwoFactorProviderType {
@@ -186,6 +194,10 @@ struct ConnectErrorRes {
     error_model: Option<ConnectErrorResErrorModel>,
     #[serde(rename = "TwoFactorProviders", alias = "twoFactorProviders")]
     two_factor_providers: Option<Vec<TwoFactorProviderType>>,
+    #[serde(rename = "TwoFactorProviders2", alias = "twoFactorProviders2")]
+    two_factor_providers2: Option<
+        HashMap<TwoFactorProviderType, Option<TwoFactorProvider2WebAuthn>>,
+    >,
 }
 
 #[derive(serde::Deserialize, Debug)]
@@ -1148,6 +1160,7 @@ fn classify_login_error(error_res: &ConnectErrorRes, code: u16) -> Error {
                 {
                     return Error::TwoFactorRequired {
                         providers: providers.clone(),
+                        providers2: error_res.two_factor_providers2.clone(),
                     };
                 }
             }

@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
     #[error("email address not set")]
@@ -214,6 +216,12 @@ pub enum Error {
     #[error("two factor required")]
     TwoFactorRequired {
         providers: Vec<crate::api::TwoFactorProviderType>,
+        providers2: Option<
+            HashMap<
+                crate::api::TwoFactorProviderType,
+                Option<crate::api::TwoFactorProvider2WebAuthn>,
+            >,
+        >,
     },
 
     #[error("unimplemented cipherstring type: {ty}")]

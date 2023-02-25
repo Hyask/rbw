@@ -42,6 +42,8 @@ fn real_main() -> anyhow::Result<()> {
     )
     .init();
 
+    log::info!("Starting agent (version: {})", rbw::protocol::version());
+
     let no_daemonize = std::env::args()
         .nth(1)
         .map_or(false, |arg| arg == "--no-daemonize");
