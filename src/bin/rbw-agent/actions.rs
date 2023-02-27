@@ -1,4 +1,12 @@
+use std::sync::mpsc::channel;
+
 use anyhow::Context as _;
+use authenticator::{
+    authenticatorservice::AuthenticatorService, statecallback::StateCallback,
+    AuthenticatorTransports, KeyHandle, RegisterFlags, SignFlags,
+    StatusUpdate,
+};
+use sha2::{Digest, Sha256};
 
 pub async fn register(
     sock: &mut crate::sock::Sock,
@@ -153,8 +161,68 @@ pub async fn login(
                             .is_some()
                         {
                             let webauthn = &providers2
-                                [&rbw::api::TwoFactorProviderType::WebAuthn];
+                                [&rbw::api::TwoFactorProviderType::WebAuthn]
+                                .as_ref()
+                                .unwrap();
                             dbg!(webauthn);
+                            let mut manager = AuthenticatorService::new()
+                                .expect(
+                                "The auth service should initialize safely",
+                            );
+
+                            let mut challenge = Sha256::new();
+                            challenge.update(webauthn.challenge.as_str());
+                            let chall_bytes = challenge.finalize().to_vec();
+
+                            let mut application = Sha256::new();
+                            application.update(webauthn.rp_id.as_str());
+                            let app_bytes = application.finalize().to_vec();
+
+                            let key_handle = KeyHandle {
+                                credential: vec![],
+                                transports: AuthenticatorTransports::all(),
+                            };
+
+                            manager.add_u2f_usb_hid_platform_transports();
+
+                            // manager.add_detected_transports();
+                            let flags = SignFlags::empty();
+                            let (sign_tx, sign_rx) = channel();
+                            let (status_tx, status_rx) =
+                                channel::<StatusUpdate>();
+
+                            let callback =
+                                StateCallback::new(Box::new(move |rv| {
+                                    sign_tx.send(rv).unwrap();
+                                }));
+                            if let Err(e) = manager.sign(
+                                flags,
+                                webauthn.timeout,
+                                chall_bytes,
+                                vec![app_bytes],
+                                vec![key_handle],
+                                status_tx,
+                                callback,
+                            ) {
+                                panic!("Couldn't register: {:?}", e);
+                            }
+
+                            let sign_result = sign_rx.recv().expect(
+                                "Problem receiving, unable to continue",
+                            );
+                            let (_, handle_used, sign_data, device_info) =
+                                sign_result.expect("Sign failed");
+
+                            println!(
+                                "Sign result: {}",
+                                base64::encode(&sign_data)
+                            );
+                            println!(
+                                "Key handle used: {}",
+                                base64::encode(&handle_used)
+                            );
+                            println!("Device info: {}", &device_info);
+
                             // TODO: this is the place to get the sign from the key
                         }
                     }

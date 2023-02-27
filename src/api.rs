@@ -61,8 +61,10 @@ pub enum TwoFactorProviderType {
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Deserialize)]
 pub struct TwoFactorProvider2WebAuthn {
-    challenge: String,
-    timeout: u64,
+    pub challenge: String,
+    #[serde(rename = "rpId")]
+    pub rp_id: String,
+    pub timeout: u64,
 }
 
 impl<'de> serde::Deserialize<'de> for TwoFactorProviderType {
