@@ -1,3 +1,8 @@
+#### Skia dev:
+
+* `tail -F ~/.local/share/rbw-guy/agent.err`
+* `pkill rbw-agent; cargo run --bin rbw-agent && cargo run --bin rbw -- login`
+
 # rbw
 
 This is an unofficial command line client for
