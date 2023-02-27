@@ -38,6 +38,7 @@ impl DeserializeJsonWithPathAsync for reqwest::Response {
             .bytes()
             .await
             .map_err(|source| Error::Reqwest { source })?;
+        dbg!(serde_json::from_slice::<serde_json::Value>(&bytes).unwrap());
         let jd = &mut serde_json::Deserializer::from_slice(&bytes);
         serde_path_to_error::deserialize(jd)
             .map_err(|source| Error::Json { source })

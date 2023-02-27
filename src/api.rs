@@ -61,10 +61,19 @@ pub enum TwoFactorProviderType {
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Deserialize)]
 pub struct TwoFactorProvider2WebAuthn {
+    #[serde(rename = "allowCredentials")]
+    pub allow_credentials: Vec<WebAuthnCredentials>,
     pub challenge: String,
     #[serde(rename = "rpId")]
     pub rp_id: String,
     pub timeout: u64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, serde::Deserialize)]
+pub struct WebAuthnCredentials {
+    pub id: String,
+    #[serde(rename = "type")]
+    pub cred_type: String,
 }
 
 impl<'de> serde::Deserialize<'de> for TwoFactorProviderType {

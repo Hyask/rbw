@@ -178,10 +178,15 @@ pub async fn login(
                             application.update(webauthn.rp_id.as_str());
                             let app_bytes = application.finalize().to_vec();
 
-                            let key_handle = KeyHandle {
-                                credential: vec![],
-                                transports: AuthenticatorTransports::all(),
-                            };
+                            let key_handles: Vec<KeyHandle> = webauthn
+                                .allow_credentials
+                                .iter()
+                                .map(|cred| KeyHandle {
+                                    credential: cred.id.clone().into_bytes(),
+                                    transports: AuthenticatorTransports::all(
+                                    ),
+                                })
+                                .collect();
 
                             manager.add_u2f_usb_hid_platform_transports();
 
@@ -195,12 +200,15 @@ pub async fn login(
                                 StateCallback::new(Box::new(move |rv| {
                                     sign_tx.send(rv).unwrap();
                                 }));
+                            dbg!(
+                                "Please press the key button to authenticate..."
+                            );
                             if let Err(e) = manager.sign(
                                 flags,
                                 webauthn.timeout,
                                 chall_bytes,
                                 vec![app_bytes],
-                                vec![key_handle],
+                                key_handles,
                                 status_tx,
                                 callback,
                             ) {
